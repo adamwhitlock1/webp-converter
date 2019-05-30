@@ -1,38 +1,62 @@
 <template>
-  <div class="container mx-auto px-2">
-    <div class="flex">
-      <div id="file-drag-drop w-1/2 p-2">
+  <div class="font-sans container mt-6 mx-auto px-2">
+    <div class="flex justify-end align-middle mb-4">
+      <transition name="fade">
+        <p class="font-mono text-green-600 self-center mr-4" v-show="done">
+          DONE!
+        </p>
+      </transition>
+      <button
+        @click="startConvert(files)"
+        class="bg-orange-500 font-mono text-sm text-white py-2 px-6 rounded-full float-right self-center"
+      >
+        Start Conversion
+      </button>
+    </div>
+    <div class="block">
+      <div id="file-drag-drop w-full p-2">
         <form
           ref="fileform"
-          class="fileform bg-cyan"
-          :class="{ dragOn: isDraggedOn }"
+          class="fileform w-full h-40 rounded-lg hover:shadow-xl shadow-md flex bg-blue-500 text-center border-dashed border-4 border-blue-700"
         >
-          <span class="font-body drop-files text-white"
-            >Drop the files here!</span
-          >
+          <span class="font-mono drop-files text-white self-center">
+            Drop your files here
+          </span>
         </form>
       </div>
-      <div class="w-1/2 p-4">
-        <p>
+    </div>
+    <div class="w-full pt-4 px-1">
+      <button id="outputFolderSelector" class="very-sweet-looking">Open</button>
+      <p>Output Folder: {{ outputFolder }}</p>
+      <input
+        @change="processFile($event)"
+        id="outputFolderInput"
+        type="file"
+        style="display: none"
+        webkitdirectory
+      />
+      <div v-show="files.length > 0">
+        <p class="mb-1 font-mono text-sm">
           Files:
         </p>
-        <div v-show="files.length > 0">
-          <ul v-for="item in files" :key="item.id">
-            <li class="text-xs">
-              <img :src="item.path" class="w-12" />
+        <ul v-for="item in files" :key="item.id" class="w-full">
+          <li class="text-xs flex mb-2 border rounded shadow">
+            <div class="mr-4 w-1/6">
+              <img :src="'file://' + item.path" class=" w-32 p-1" />
+            </div>
+            <div class="w-5/6 pt-3">
+              <button
+                class="block rounded-full border border-red-600 text-red-600 w-6 h-6 mr-3 float-right"
+              >
+                X
+              </button>
+              {{ item.name }}<br />
               {{ (item.size / 1000000).toFixed(2) }}mb
-              {{ item.name }}
-            </li>
-          </ul>
-        </div>
+            </div>
+          </li>
+        </ul>
       </div>
     </div>
-    <button
-      @click="startConvert"
-      class="bg-orange-500 text-white p-2 rounded mt-4 float-right"
-    >
-      Start Conversion
-    </button>
   </div>
 </template>
 
@@ -41,7 +65,6 @@ const fs = require("fs");
 const path = require("path");
 const imagemin = require("imagemin");
 const imageminWebp = require("imagemin-webp");
-const fixPath = require("fix-path");
 
 export default {
   name: "DragAndDrop",
@@ -51,10 +74,17 @@ export default {
       files: [],
       doneFiles: [],
       isDraggedOn: false,
-      done: false
+      done: false,
+      outputFolder: ""
     };
   },
   mounted() {
+    document
+      .getElementById("outputFolderSelector")
+      .addEventListener("click", () => {
+        document.getElementById("outputFolderInput").click();
+      });
+
     this.dragAndDropCapable = this.determineDragAndDropCapable();
     if (this.dragAndDropCapable) {
       [
@@ -78,29 +108,19 @@ export default {
         }.bind(this)
       );
 
-      this.$refs.fileform.addEventListener(
-        "drop",
-        function(e) {
-          for (let i = 0; i < e.dataTransfer.files.length; i++) {
-            this.files.push(e.dataTransfer.files[i]);
-            console.log(e.dataTransfer.files[i]);
-          }
-        }.bind(this)
-      );
-
-      this.$refs.fileform.addEventListener("dragenter", () => {
-        this.isDraggedOn = true;
-      });
-
-      this.$refs.fileform.addEventListener("dragleave", () => {
-        this.isDraggedOn = false;
-      });
-      this.$refs.fileform.addEventListener("drop", () => {
-        this.isDraggedOn = false;
+      this.$refs.fileform.addEventListener("drop", e => {
+        for (let i = 0; i < e.dataTransfer.files.length; i++) {
+          this.files.push(e.dataTransfer.files[i]);
+          console.log(e.dataTransfer.files[i]);
+        }
       });
     }
   },
   methods: {
+    processFile(event) {
+      console.log(event.target.files);
+      this.outputFolder = event.target.files[0].path;
+    },
     determineDragAndDropCapable() {
       var div = document.createElement("div");
       return (
@@ -109,18 +129,24 @@ export default {
         "FileReader" in window
       );
     },
-    startConvert() {
-      this.files.forEach(el => {
+    startConvert(files) {
+      console.log(files);
+      files.forEach(el => {
         this.convertImages(el, (err, file) => {
           if (err) {
             console.log("ERROR");
             console.log(err);
             return;
           }
-
+          console.log("FILE CONVERSION DONE");
           this.doneFiles.push(file);
           if (this.doneFiles.length === this.files.length) {
             this.done = true;
+            setTimeout(() => {
+              this.done = false;
+              this.files = [];
+              this.doneFiles = [];
+            }, 1000);
           }
           return;
         });
@@ -152,20 +178,18 @@ export default {
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
 .fileform {
-  border: 6px solid rgba(0, 0, 0, 0);
   transition: 0.4s;
 }
 
-.dragOn {
-  border: 6px solid rgba(0, 100, 0, 0.6);
+.drop-files {
+  width: 100%;
 }
 
-form {
-  display: block;
-  height: 300px;
-  width: 300px;
-  text-align: center;
-  line-height: 275px;
-  border-radius: 4px;
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s;
+}
+.fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
+  opacity: 0;
 }
 </style>

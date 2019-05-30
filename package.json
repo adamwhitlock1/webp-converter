@@ -38,8 +38,5 @@
     "vue-cli-plugin-electron-builder": "^1.3.4",
     "vue-template-compiler": "^2.6.10"
   },
-  "main": "background.js",
-  "build": {
-    "asar": false
-  }
+  "main": "background.js"
 }

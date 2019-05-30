@@ -1,9 +1,5 @@
 module.exports = {
   theme: {
-    fontFamily: {
-      display: ["Roboto Mono", "sans-serif"],
-      body: ["Roboto Mono", "sans-serif"]
-    },
     extend: {
       colors: {
         adobe: "#323232",
